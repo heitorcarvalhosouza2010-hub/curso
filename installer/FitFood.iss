@@ -1,15 +1,16 @@
 #define AppName "FitFood"
-#define AppVersion "1.0.0"
+#define AppVersion "0.1.0"
 
 [Setup]
 AppId={{BC7B28E4-546A-48B2-A0F2-913677C5A487}
 AppName={#AppName}
 AppVersion={#AppVersion}
-DefaultDirName={autopf}\FitFood
+DefaultDirName={localappdata}\Programs\FitFood
 DefaultGroupName={#AppName}
 OutputDir=..\dist\installer
 OutputBaseFilename=FitFood-Setup-{#AppVersion}
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64compatible
+PrivilegesRequired=lowest
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

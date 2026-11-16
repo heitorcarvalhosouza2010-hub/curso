@@ -80,7 +80,7 @@ O plano gratuito usa armazenamento efêmero: o SQLite poderá ser apagado quando
 
 A página inicial e materiais de divulgação estão em `docs/`. O instalador e a API pública só devem ser anunciados depois de compilados, testados e publicados.
 
-O executável beta para Windows está no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O instalador Inno Setup e o deploy Render ainda estão pendentes.
+O instalador beta para Windows e o executável portátil estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O deploy Render ainda está pendente.
 
 ## Uso responsável
 

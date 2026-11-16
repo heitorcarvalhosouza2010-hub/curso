@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FitFood: registro simples de refeições e macronutrientes para quem treina.">
+  <title>FitFood | Seu diário alimentar</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #17241d; background: #f4f8f4; }
+    body { margin: 0; }
+    main { max-width: 760px; margin: 0 auto; padding: 64px 24px; }
+    h1 { font-size: clamp(2.5rem, 8vw, 4.5rem); margin: 0; color: #147d50; }
+    h2 { margin-top: 40px; }
+    p, li { line-height: 1.65; }
+    .card { background: white; border-radius: 18px; padding: 28px; box-shadow: 0 8px 32px #1232; }
+    .notice { border-left: 4px solid #e6a23c; padding-left: 14px; }
+    .button { display: inline-block; margin: 8px 8px 0 0; padding: 12px 18px; border-radius: 10px; background: #147d50; color: white; text-decoration: none; font-weight: 700; }
+    .button.secondary { background: #e6f2eb; color: #126b47; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .gallery img { display: block; width: 100%; border-radius: 14px; }
+    a { color: #126b47; }
+    footer { margin-top: 48px; color: #52635a; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <p>Diário alimentar para quem treina</p>
+      <h1>FitFood</h1>
+      <p>Registre refeições e acompanhe calorias, proteínas, carboidratos e gorduras em um só lugar.</p>
+      <p>O aplicativo está em desenvolvimento. A versão para download e a API pública ainda não foram publicadas.</p>
+      <a class="button" href="#download">Download (em breve)</a>
+      <a class="button secondary" href="#api">API web (em breve)</a>
+      <p><a href="https://github.com/heitorcarvalhosouza2010-hub/curso">Ver o código-fonte no GitHub</a></p>
+    </section>
+    <section>
+      <h2>O que você pode acompanhar</h2>
+      <ul>
+        <li>Refeições registradas e porções informadas por você.</li>
+        <li>Resumo diário de calorias e macronutrientes.</li>
+        <li>Ideias gerais de refeições com IA, quando configurada.</li>
+      </ul>
+    </section>
+    <section class="gallery" aria-label="Materiais de divulgação">
+      <img src="promo-fitfood.svg" alt="FitFood: refeições e macros organizados para sua rotina de treino">
+      <img src="promo-macros.svg" alt="FitFood: registre, acompanhe e ajuste com responsabilidade">
+    </section>
+    <section id="download">
+      <h2>Download</h2>
+      <p>O instalador ainda não foi publicado. Ele será disponibilizado na página de lançamentos depois de compilado e testado.</p>
+      <a href="https://github.com/heitorcarvalhosouza2010-hub/curso/releases">Ver lançamentos do FitFood</a>
+    </section>
+    <section id="api">
+      <h2>API web</h2>
+      <p>A API está disponível para execução local; o serviço HTTPS público ainda não foi configurado.</p>
+    </section>
+    <section>
+      <h2>Requisitos e perguntas frequentes</h2>
+      <p><strong>Requisitos:</strong> Windows 10 ou superior para o instalador planejado. O código Python pode ser executado com Python 3.10+ em Windows, macOS ou Linux.</p>
+      <p><strong>Preciso de uma chave de IA?</strong> Não para registrar refeições. A chave é opcional e necessária somente para sugestões gerais.</p>
+      <p><strong>O app define uma dieta?</strong> Não. Ele registra valores informados pelo usuário e não calcula metas nem prescreve alimentação.</p>
+    </section>
+    <p class="notice">As informações nutricionais são fornecidas pelo usuário e não são verificadas. Sugestões de IA podem conter erros e não substituem orientação de nutricionista ou profissional de saúde.</p>
+    <footer>FitFood — versão inicial em desenvolvimento.</footer>
+  </main>
+</body>
+</html>

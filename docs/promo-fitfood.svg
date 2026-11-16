@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-labelledby="title desc">
+  <title id="title">FitFood, refeições organizadas</title>
+  <desc id="desc">Arte promocional verde para o diário alimentar FitFood.</desc>
+  <rect width="1080" height="1080" rx="72" fill="#eaf5ed"/>
+  <circle cx="850" cy="210" r="220" fill="#d3eadb"/>
+  <circle cx="170" cy="900" r="260" fill="#d3eadb"/>
+  <text x="90" y="170" fill="#147d50" font-family="Arial, sans-serif" font-size="44" font-weight="700">DIÁRIO ALIMENTAR PARA QUEM TREINA</text>
+  <text x="90" y="410" fill="#17241d" font-family="Arial, sans-serif" font-size="120" font-weight="700">FitFood</text>
+  <text x="96" y="510" fill="#315744" font-family="Arial, sans-serif" font-size="48">Suas refeições, em um só lugar.</text>
+  <rect x="90" y="620" width="900" height="230" rx="36" fill="#147d50"/>
+  <text x="140" y="715" fill="#ffffff" font-family="Arial, sans-serif" font-size="42" font-weight="700">REGISTRE  ·  ACOMPANHE  ·  APRENDA</text>
+  <text x="140" y="785" fill="#eaf5ed" font-family="Arial, sans-serif" font-size="34">Calorias e macros com simplicidade.</text>
+  <text x="92" y="960" fill="#52635a" font-family="Arial, sans-serif" font-size="28">Informação geral. Não substitui orientação profissional.</text>
+</svg>

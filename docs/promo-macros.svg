@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Acompanhe seus macros com FitFood</title>
+  <desc id="desc">Arte promocional destacando o registro de proteínas, carboidratos e gorduras.</desc>
+  <rect width="1080" height="1080" rx="72" fill="#17241d"/>
+  <path d="M0 770 Q360 630 1080 790 V1080 H0Z" fill="#204b37"/>
+  <text x="90" y="160" fill="#9dd8b2" font-family="Arial, sans-serif" font-size="42" font-weight="700">UMA ROTINA MAIS ORGANIZADA</text>
+  <text x="90" y="330" fill="#ffffff" font-family="Arial, sans-serif" font-size="88" font-weight="700">Acompanhe</text>
+  <text x="90" y="435" fill="#ffffff" font-family="Arial, sans-serif" font-size="88" font-weight="700">seus macros.</text>
+  <g font-family="Arial, sans-serif" font-size="42" font-weight="700">
+    <rect x="90" y="540" width="280" height="140" rx="24" fill="#147d50"/>
+    <text x="125" y="625" fill="#ffffff">Proteínas</text>
+    <rect x="400" y="540" width="280" height="140" rx="24" fill="#298e62"/>
+    <text x="435" y="625" fill="#ffffff">Carboidratos</text>
+    <rect x="710" y="540" width="280" height="140" rx="24" fill="#48a579"/>
+    <text x="745" y="625" fill="#ffffff">Gorduras</text>
+  </g>
+  <text x="90" y="830" fill="#ffffff" font-family="Arial, sans-serif" font-size="38">FitFood · Diário alimentar para quem treina</text>
+  <text x="90" y="930" fill="#c5d8cb" font-family="Arial, sans-serif" font-size="28">Valores informados pelo usuário. Sem prescrição de dieta.</text>
+</svg>

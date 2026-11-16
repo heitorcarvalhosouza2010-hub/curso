@@ -72,6 +72,18 @@ pyinstaller --noconsole --onefile --name FitFood --paths . src\app.py
 
 O executável ficará em `dist\FitFood.exe`. Com o Inno Setup instalado, abra `installer\FitFood.iss` e compile o instalador. Teste-o em outro diretório antes de distribuir. O banco de dados é salvo na pasta de dados do usuário, não em `Program Files`.
 
+## Android
+
+O projeto Android fica em `android/`. Ele registra refeições e salva os dados localmente no celular; esta versão não sincroniza com o aplicativo Windows nem oferece sugestões de IA.
+
+Para instalar no celular:
+
+1. Abra o [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0) no Android e baixe `FitFood-Android-v0.1.0.apk`.
+2. Abra o APK baixado. Se solicitado, permita que o navegador ou o app Arquivos instale aplicativos desconhecidos e confirme a instalação.
+3. Instale somente o APK publicado no release oficial do projeto.
+
+O APK é uma versão beta distribuída fora da Play Store e requer Android 6.0 ou superior. A compilação e publicação são feitas pelo GitHub Actions.
+
 ## Deploy e publicação
 
 O arquivo `render.yaml` prepara um serviço gratuito de demonstração no Render. Conecte o repositório no Render e crie um Blueprint para iniciar o deploy. O endpoint `/health` não exige autenticação; os demais endpoints exigem o `APP_API_TOKEN` gerado pelo Render.
@@ -80,7 +92,7 @@ O plano gratuito usa armazenamento efêmero: o SQLite poderá ser apagado quando
 
 A página inicial e materiais de divulgação estão em `docs/`. O instalador e a API pública só devem ser anunciados depois de compilados, testados e publicados.
 
-O instalador beta para Windows e o executável portátil estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O deploy Render ainda está pendente.
+O instalador beta para Windows, o executável portátil e o APK Android estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O deploy Render ainda está pendente.
 
 ## Uso responsável
 

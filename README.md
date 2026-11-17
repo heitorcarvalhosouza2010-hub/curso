@@ -82,15 +82,15 @@ O executável ficará em `dist\FitFood.exe`. Com o Inno Setup instalado, abra `i
 
 ## Android
 
-O projeto Android fica em `android/`. Ele registra refeições e salva os dados localmente no celular; esta versão não sincroniza com o aplicativo Windows nem oferece sugestões de IA.
+O projeto Android fica em `android/`. A versão 0.2.0 permite criar conta local, escolher um objetivo, analisar fotos de refeições com IA, revisar os valores antes de salvar e consultar o histórico do dia. Contas e refeições ficam no celular e não sincronizam com o aplicativo Windows.
 
 Para instalar no celular:
 
-1. Abra o [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0) no Android e baixe `FitFood-Android-v0.1.0.apk`.
+1. Abra o [release v0.2.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.2.0) no Android e baixe `FitFood-Android-v0.2.0.apk`.
 2. Abra o APK baixado. Se solicitado, permita que o navegador ou o app Arquivos instale aplicativos desconhecidos e confirme a instalação.
 3. Instale somente o APK publicado no release oficial do projeto.
 
-O APK é uma versão beta distribuída fora da Play Store e requer Android 6.0 ou superior. A compilação e publicação são feitas pelo GitHub Actions.
+O APK é uma versão beta distribuída fora da Play Store e requer Android 6.0 ou superior. Para analisar fotos, configure no app sua própria chave da API da OpenAI. A chave é criptografada no Android Keystore e nunca é embutida no APK. A foto é enviada diretamente à API para processamento, não é guardada no diário, e o uso da API pode gerar cobrança na conta do provedor. A compilação e publicação são feitas pelo GitHub Actions.
 
 ## Deploy e publicação
 
@@ -100,7 +100,7 @@ O plano gratuito usa armazenamento efêmero: o SQLite poderá ser apagado quando
 
 A página inicial e materiais de divulgação estão em `docs/`. O instalador e a API pública só devem ser anunciados depois de compilados, testados e publicados.
 
-O instalador beta para Windows, o executável portátil e o APK Android estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O deploy Render ainda está pendente.
+O instalador beta para Windows e o executável portátil estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O APK Android atualizado está no [release v0.2.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.2.0). O deploy Render ainda está pendente.
 
 ## Uso responsável
 

@@ -39,10 +39,17 @@ jobs:
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Publish APK to the beta release
+      - name: Create beta release and publish APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk FitFood-Android-v0.1.0.apk
-          gh release upload v0.1.0 FitFood-Android-v0.1.0.apk \
+          cp android/app/build/outputs/apk/debug/app-debug.apk FitFood-Android-v0.2.0.apk
+          if ! gh release view v0.2.0 --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            gh release create v0.2.0 \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "FitFood v0.2.0 (beta)" \
+              --notes "Versão Android com login local, escolha de objetivo, análise de foto por IA e diário por conta."
+          fi
+          gh release upload v0.2.0 FitFood-Android-v0.2.0.apk \
             --repo "${GITHUB_REPOSITORY}" --clobber

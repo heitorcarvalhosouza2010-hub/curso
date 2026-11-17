@@ -82,13 +82,15 @@ O executável ficará em `dist\FitFood.exe`. Com o Inno Setup instalado, abra `i
 
 ## Android
 
-O projeto Android fica em `android/`. A versão 0.5.0 adiciona uma tela de capa ilustrada, ícone próprio e uma interface adaptada para celular. Permite criar conta local, escolher um objetivo, conversar com o chatbot Gemini, analisar fotos de refeições, revisar os valores antes de salvar e consultar o histórico do dia. Também pode estimar uma meta diária de calorias para adultos com a equação Mifflin-St Jeor, usando idade, peso, altura, fórmula metabólica e atividade; o objetivo altera levemente essa referência. É uma estimativa geral, não uma prescrição, e resultados abaixo de 1.200 kcal/dia não são exibidos. Contas, perfil e refeições ficam no celular e não sincronizam com o aplicativo Windows.
+O projeto Android fica em `android/`. A versão 0.6.0 inclui uma tela de capa ilustrada, ícone próprio e interface adaptada para celular. Permite criar conta local, escolher um objetivo, conversar com o chatbot Gemini, tirar fotos diretamente pela câmera ou escolher imagens da galeria para análise, revisar os valores antes de salvar e consultar o histórico do dia. Também pode estimar uma meta diária de calorias para adultos com a equação Mifflin-St Jeor, usando idade, peso, altura, fórmula metabólica e atividade; o objetivo altera levemente essa referência. É uma estimativa geral, não uma prescrição, e resultados abaixo de 1.200 kcal/dia não são exibidos. Contas, perfil e refeições ficam no celular e não sincronizam com o aplicativo Windows.
 
 O chatbot usa o modelo multimodal Gemini 3.5 Flash-Lite na cota gratuita da API Google Gemini. Para evitar cobranças, crie a chave no [Google AI Studio](https://aistudio.google.com/apikey) e não associe faturamento ao projeto. A cota tem limites que podem mudar ou ficar indisponíveis. Mensagens e fotos são enviadas ao Google; no nível gratuito, o conteúdo pode ser usado para melhorar produtos. O aplicativo pede consentimento antes do primeiro envio e armazena a chave criptografada no Android Keystore.
 
+Para usar o chatbot e a análise de fotos, é necessária uma chave Gemini pessoal. Ao solicitar uma foto ou abrir o chatbot, o aplicativo orienta a configurar a chave e retoma a ação após salvá-la. Sem chave válida, a análise não pode ser executada. Não é seguro embutir uma chave compartilhada no APK, pois ela poderia ser extraída e usada por terceiros.
+
 Para instalar no celular:
 
-1. Abra o [release v0.5.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.5.0) no Android e baixe `FitFood-Android-v0.5.0.apk`.
+1. Abra o [release v0.6.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.6.0) no Android e baixe `FitFood-Android-v0.6.0.apk`.
 2. Abra o APK baixado. Se solicitado, permita que o navegador ou o app Arquivos instale aplicativos desconhecidos e confirme a instalação.
 3. Instale somente o APK publicado no release oficial do projeto.
 
@@ -102,7 +104,7 @@ O plano gratuito usa armazenamento efêmero: o SQLite poderá ser apagado quando
 
 A página inicial e materiais de divulgação estão em `docs/`. O instalador e a API pública só devem ser anunciados depois de compilados, testados e publicados.
 
-O instalador beta para Windows e o executável portátil estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O APK Android atualizado está no [release v0.5.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.5.0). O deploy Render ainda está pendente.
+O instalador beta para Windows e o executável portátil estão no [release v0.1.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.1.0). O APK Android atualizado está no [release v0.6.0](https://github.com/heitorcarvalhosouza2010-hub/curso/releases/tag/v0.6.0). O deploy Render ainda está pendente.
 
 ## Uso responsável
 

@@ -2,6 +2,7 @@ package br.com.fitfood;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -11,6 +12,7 @@ import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -27,8 +29,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
+
 import org.json.JSONException;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
@@ -50,6 +55,7 @@ public final class MainActivity extends Activity {
     private static final int MUTED = Color.rgb(103, 119, 108);
     private static final int PICK_ANALYSIS_IMAGE = 1001;
     private static final int PICK_CHAT_IMAGE = 1002;
+    private static final int CAPTURE_ANALYSIS_IMAGE = 1003;
     private static final String AI_PREFERENCES = "fitfood_ai_consent";
     private static final String GEMINI_CONSENT = "gemini_free_tier_consent";
     private static final String APP_PREFERENCES = "fitfood_app";
@@ -81,6 +87,8 @@ public final class MainActivity extends Activity {
     private TextView chatStatus;
     private Button sendChatButton;
     private Uri pendingChatImage;
+    private Uri pendingCaptureUri;
+    private File pendingCaptureFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -322,10 +330,11 @@ public final class MainActivity extends Activity {
         photoCard.setBackground(rounded(MINT, 22));
         addHeading(photoCard, "Analise seu prato", 21);
         addBody(photoCard,
-                "Uma foto basta para estimar porções e nutrientes. Revise tudo antes de "
-                        + "adicionar ao diário.",
+                "Tire uma foto ou escolha uma imagem. O Gemini estima porções e nutrientes; "
+                        + "revise tudo antes de adicionar ao diário. É necessária uma chave Gemini.",
                 14);
-        addButton(photoCard, "Escolher foto do prato", true, this::choosePhoto);
+        addButton(photoCard, "Tirar foto do prato", true, this::takePhoto);
+        addButton(photoCard, "Escolher da galeria", false, this::choosePhoto);
         addButton(photoCard, "Abrir chatbot FitFood", false, this::showChatScreen);
 
         LinearLayout privacyCard = card();
@@ -486,15 +495,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showChatScreen() {
-        String apiKey;
-        try {
-            apiKey = SecureKeyStore.load(this);
-        } catch (GeneralSecurityException exception) {
-            setStatus("Não foi possível acessar a chave Gemini. Configure-a novamente.", true);
-            return;
-        }
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            showApiKeyDialog();
+        if (!ensureGeminiKey(this::showChatScreen)) {
             return;
         }
 
@@ -601,7 +602,7 @@ public final class MainActivity extends Activity {
             return;
         }
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            showApiKeyDialog();
+            showApiKeyDialog(this::sendChatMessageAfterConsent);
             return;
         }
 
@@ -707,23 +708,55 @@ public final class MainActivity extends Activity {
     }
 
     private void choosePhotoAfterConsent() {
-        String apiKey;
-        try {
-            apiKey = SecureKeyStore.load(this);
-        } catch (GeneralSecurityException exception) {
-            setStatus("Não foi possível acessar a chave de IA. Configure-a novamente.", true);
+        if (!ensureGeminiKey(this::choosePhotoAfterConsent)) {
             return;
         }
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            showApiKeyDialog();
-            return;
-        }
-
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivityForResult(intent, PICK_ANALYSIS_IMAGE);
+    }
+
+    private void takePhoto() {
+        ensureFreeAiConsent(this::takePhotoAfterConsent);
+    }
+
+    private void takePhotoAfterConsent() {
+        if (!ensureGeminiKey(this::takePhotoAfterConsent)) {
+            return;
+        }
+
+        File cameraDirectory = new File(getCacheDir(), "camera");
+        if (!cameraDirectory.exists() && !cameraDirectory.mkdirs()) {
+            setStatus("Não foi possível preparar o armazenamento temporário da foto.", true);
+            return;
+        }
+        File photoFile = null;
+        Uri photoUri;
+        try {
+            photoFile = File.createTempFile("fitfood-meal-", ".jpg", cameraDirectory);
+            photoUri = FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", photoFile);
+        } catch (IOException | IllegalArgumentException | SecurityException exception) {
+            deleteTemporaryPhoto(photoFile);
+            setStatus("Não foi possível preparar a captura da foto.", true);
+            return;
+        }
+
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+        cameraIntent.setClipData(ClipData.newUri(getContentResolver(), "Foto do prato", photoUri));
+        cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        pendingCaptureFile = photoFile;
+        pendingCaptureUri = photoUri;
+        try {
+            startActivityForResult(cameraIntent, CAPTURE_ANALYSIS_IMAGE);
+        } catch (android.content.ActivityNotFoundException exception) {
+            clearPendingCapture();
+            setStatus("Nenhum aplicativo de câmera está disponível neste celular.", true);
+        }
     }
 
     @Override
@@ -738,23 +771,51 @@ public final class MainActivity extends Activity {
             }
             return;
         }
-        if (requestCode != PICK_ANALYSIS_IMAGE || resultCode != RESULT_OK
-                || data == null || data.getData() == null) {
+        if (requestCode == CAPTURE_ANALYSIS_IMAGE) {
+            Uri imageUri = pendingCaptureUri;
+            if (resultCode != RESULT_OK || imageUri == null) {
+                clearPendingCapture();
+                if (resultCode == RESULT_CANCELED) {
+                    setStatus("Captura da foto cancelada.", false);
+                }
+                return;
+            }
+            startAnalysis(imageUri);
             return;
         }
-        Uri imageUri = data.getData();
+        if (requestCode != PICK_ANALYSIS_IMAGE) {
+            return;
+        }
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            if (resultCode == RESULT_OK) {
+                setStatus("Não foi possível obter a foto selecionada.", true);
+            }
+            return;
+        }
+        startAnalysis(data.getData());
+    }
+
+    private void startAnalysis(Uri imageUri) {
+        if (!ensureGeminiKey(() -> startAnalysis(imageUri))) {
+            return;
+        }
         String apiKey;
         try {
             apiKey = SecureKeyStore.load(this);
         } catch (GeneralSecurityException exception) {
-            setStatus("Não foi possível acessar a chave de IA. Configure-a novamente.", true);
+            clearPendingCapture();
+            setStatus("Não foi possível acessar a chave Gemini. Configure-a novamente.", true);
             return;
         }
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            showApiKeyDialog();
+            showApiKeyDialog(() -> startAnalysis(imageUri));
             return;
         }
 
+        File capturedFile = pendingCaptureUri != null && pendingCaptureUri.equals(imageUri)
+                ? pendingCaptureFile : null;
+        pendingCaptureUri = null;
+        pendingCaptureFile = null;
         final int requestAccountId = account.id;
         final String requestGoal = account.goal;
         setStatus("Analisando a foto. Isso pode levar alguns segundos...", false);
@@ -774,8 +835,36 @@ public final class MainActivity extends Activity {
                         setStatus(exception.getMessage(), true);
                     }
                 });
+            } finally {
+                deleteTemporaryPhoto(capturedFile);
             }
         });
+    }
+
+    private boolean ensureGeminiKey(Runnable actionAfterSave) {
+        try {
+            String apiKey = SecureKeyStore.load(this);
+            if (apiKey != null && !apiKey.trim().isEmpty()) {
+                return true;
+            }
+        } catch (GeneralSecurityException exception) {
+            setStatus("Não foi possível acessar a chave Gemini. Configure-a novamente.", true);
+            return false;
+        }
+        showApiKeyDialog(actionAfterSave);
+        return false;
+    }
+
+    private void clearPendingCapture() {
+        deleteTemporaryPhoto(pendingCaptureFile);
+        pendingCaptureFile = null;
+        pendingCaptureUri = null;
+    }
+
+    private void deleteTemporaryPhoto(File photoFile) {
+        if (photoFile != null && photoFile.exists() && !photoFile.delete()) {
+            android.util.Log.w("FitFood", "Could not delete temporary camera photo.");
+        }
     }
 
     private void showAnalysis(PlateAnalysis analysis) {
@@ -866,6 +955,10 @@ public final class MainActivity extends Activity {
     }
 
     private void showApiKeyDialog() {
+        showApiKeyDialog(null);
+    }
+
+    private void showApiKeyDialog(Runnable actionAfterSave) {
         EditText keyField = new EditText(this);
         keyField.setSingleLine(true);
         keyField.setHint("Chave da API Gemini");
@@ -905,7 +998,11 @@ public final class MainActivity extends Activity {
                 try {
                     SecureKeyStore.save(this, key);
                     dialog.dismiss();
-                    setStatus("Chave Gemini salva com segurança neste celular.", false);
+                    if (actionAfterSave == null) {
+                        setStatus("Chave Gemini salva com segurança neste celular.", false);
+                    } else {
+                        actionAfterSave.run();
+                    }
                 } catch (GeneralSecurityException exception) {
                     keyField.setError("Não foi possível salvar a chave com segurança.");
                 }

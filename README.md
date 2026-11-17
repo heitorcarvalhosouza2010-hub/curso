@@ -82,7 +82,7 @@ O executável ficará em `dist\FitFood.exe`. Com o Inno Setup instalado, abra `i
 
 ## Android
 
-O projeto Android fica em `android/`. A versão 0.2.0 permite criar conta local, escolher um objetivo, analisar fotos de refeições com IA, revisar os valores antes de salvar e consultar o histórico do dia. Contas e refeições ficam no celular e não sincronizam com o aplicativo Windows.
+O projeto Android fica em `android/`. A versão 0.2.0 permite criar conta local, escolher um objetivo, analisar fotos de refeições com IA, revisar os valores antes de salvar e consultar o histórico do dia. Também pode estimar uma meta diária de calorias para adultos com a equação Mifflin-St Jeor, usando idade, peso, altura, fórmula metabólica e atividade; o objetivo altera levemente essa referência. É uma estimativa geral, não uma prescrição, e resultados abaixo de 1.200 kcal/dia não são exibidos. Contas, perfil e refeições ficam no celular e não sincronizam com o aplicativo Windows.
 
 Para instalar no celular:
 

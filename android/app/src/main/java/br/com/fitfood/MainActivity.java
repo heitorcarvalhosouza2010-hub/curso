@@ -14,9 +14,12 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ArrayAdapter;
 
 import org.json.JSONException;
 
@@ -51,6 +54,8 @@ public final class MainActivity extends Activity {
     private LinearLayout analysisPanel;
     private TextView summary;
     private TextView status;
+    private TextView calorieProgressLabel;
+    private ProgressBar calorieProgress;
     private EditText analysisName;
     private EditText[] nutritionFields;
     private PlateAnalysis currentAnalysis;
@@ -139,7 +144,11 @@ public final class MainActivity extends Activity {
             addBody(option, "Toque para selecionar", 13);
             option.setOnClickListener(view -> {
                 account = database.updateGoal(account.id, goal);
-                showMainScreen();
+                if (account.hasCalorieProfile()) {
+                    showMainScreen();
+                } else {
+                    showCalorieProfileScreen();
+                }
             });
         }
         addButton(content, "Sair da conta", false, this::signOut);
@@ -154,6 +163,15 @@ public final class MainActivity extends Activity {
         addBody(goalCard, "SEU OBJETIVO", 12);
         addHeading(goalCard, account.goal, 17);
         addButton(goalCard, "Alterar objetivo", false, this::showGoalScreen);
+        addButton(goalCard, account.hasCalorieProfile()
+                ? "Atualizar dados da meta calórica"
+                : "Configurar meta calórica", false, this::showCalorieProfileScreen);
+        if (account.hasCalorieProfile()) {
+            addBody(goalCard, String.format(Locale.getDefault(),
+                    "Meta diária estimada: %d kcal", currentCalorieTarget()), 14);
+        } else {
+            addBody(goalCard, "Meta diária não configurada.", 14);
+        }
 
         LinearLayout photoCard = card();
         content.addView(photoCard, margins(0, 10, 0, 8));
@@ -181,6 +199,12 @@ public final class MainActivity extends Activity {
         addHeading(historyCard, "Seu diário de hoje", 20);
         summary = text("", 14, TEXT, true);
         historyCard.addView(summary, margins(0, 4, 0, 8));
+        calorieProgressLabel = text("", 13, MUTED, false);
+        historyCard.addView(calorieProgressLabel, margins(0, 2, 0, 2));
+        calorieProgress = new ProgressBar(
+                this, null, android.R.attr.progressBarStyleHorizontal);
+        calorieProgress.setMax(100);
+        historyCard.addView(calorieProgress, margins(0, 2, 0, 8));
         historyList = new LinearLayout(this);
         historyList.setOrientation(LinearLayout.VERTICAL);
         historyCard.addView(historyList);
@@ -191,6 +215,119 @@ public final class MainActivity extends Activity {
                         + "de um nutricionista.",
                 12);
         refreshMeals();
+    }
+
+    private void showCalorieProfileScreen() {
+        createScreen("Meta calórica", "Uma referência diária estimada para o seu objetivo.");
+        addBody(content,
+                "A estimativa usa idade, peso, altura, fórmula metabólica e atividade. "
+                        + "Ganhar massa: cerca de +200 kcal; perder gordura: cerca de "
+                        + "-200 kcal sobre a manutenção. Os outros objetivos usam a "
+                        + "estimativa de manutenção.",
+                14);
+        addBody(content,
+                "Escolha a fórmula que melhor se aplica ao seu corpo. Se tiver dúvida, "
+                        + "pule o cálculo e converse com um profissional.",
+                13);
+        addBody(content,
+                "Somente para adultos; não é prescrição médica. Se estiver grávida, tiver "
+                        + "uma condição de saúde ou histórico de transtorno alimentar, "
+                        + "converse com um nutricionista antes de usar. Estimativas abaixo "
+                        + "de 1.200 kcal/dia não são exibidas. Os dados ficam "
+                        + "salvos somente neste celular.",
+                13);
+
+        LinearLayout form = card();
+        content.addView(form, margins(0, 12, 0, 10));
+        EditText ageField = field(form, "Idade (18 a 100 anos)", InputType.TYPE_CLASS_NUMBER);
+        EditText weightField = field(form, "Peso atual (kg)",
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        EditText heightField = field(form, "Altura (cm)",
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        if (account.age != null) {
+            ageField.setText(Integer.toString(account.age));
+        }
+        if (account.weightKg != null) {
+            weightField.setText(formatNumber(account.weightKg));
+        }
+        if (account.heightCm != null) {
+            heightField.setText(formatNumber(account.heightCm));
+        }
+
+        addBody(form, "Fórmula de referência", 13);
+        Spinner formulaSpinner = spinner(new String[]{
+                "Selecione a fórmula",
+                "Feminina",
+                "Masculina"
+        });
+        if (CalorieGoalCalculator.FEMALE_FORMULA.equals(account.formulaSex)) {
+            formulaSpinner.setSelection(1);
+        } else if (CalorieGoalCalculator.MALE_FORMULA.equals(account.formulaSex)) {
+            formulaSpinner.setSelection(2);
+        }
+        form.addView(formulaSpinner, margins(0, 0, 0, 6));
+
+        addBody(form, "Nível de atividade", 13);
+        Spinner activitySpinner = spinner(new String[]{
+                "Selecione o nível",
+                "Sedentário: pouco ou nenhum exercício",
+                "Leve: exercício leve 1 a 3 dias por semana",
+                "Moderado: exercício 3 a 5 dias por semana",
+                "Alto: exercício intenso 6 a 7 dias por semana"
+        });
+        if (account.activityLevel != null) {
+            activitySpinner.setSelection(account.activityLevel + 1);
+        }
+        form.addView(activitySpinner, margins(0, 0, 0, 6));
+
+        addButton(form, "Calcular e salvar meta", true, () -> {
+            int age;
+            double weight;
+            double height;
+            try {
+                age = Integer.parseInt(ageField.getText().toString().trim());
+                weight = parseNumber(weightField.getText().toString());
+                height = parseNumber(heightField.getText().toString());
+            } catch (NumberFormatException exception) {
+                ageField.setError("Preencha idade, peso e altura.");
+                return;
+            }
+            if (formulaSpinner.getSelectedItemPosition() == 0) {
+                Toast.makeText(this, "Selecione uma fórmula metabólica.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (activitySpinner.getSelectedItemPosition() == 0) {
+                Toast.makeText(this, "Selecione o nível de atividade.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String formula = formulaSpinner.getSelectedItemPosition() == 1
+                    ? CalorieGoalCalculator.FEMALE_FORMULA
+                    : CalorieGoalCalculator.MALE_FORMULA;
+            int activityLevel = activitySpinner.getSelectedItemPosition() - 1;
+            try {
+                CalorieGoalCalculator.estimate(
+                        age, weight, height, formula, activityLevel, account.goal);
+                account = database.updateCalorieProfile(
+                        account.id, age, weight, height, formula, activityLevel);
+                showMainScreen();
+                setStatus("Meta calórica estimada e salva neste celular.", false);
+            } catch (IllegalArgumentException exception) {
+                Toast.makeText(this, exception.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+        addButton(form, "Continuar sem meta calórica", false, this::showMainScreen);
+    }
+
+    private Spinner spinner(String[] options) {
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, options);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        return spinner;
     }
 
     private void choosePhoto() {
@@ -409,6 +546,16 @@ public final class MainActivity extends Activity {
         summary.setText(String.format(Locale.getDefault(),
                 "%d refeições · %.1f kcal · P %.1f g · C %.1f g · G %.1f g",
                 meals.size(), calories, protein, carbs, fat));
+        if (account.hasCalorieProfile()) {
+            int target = currentCalorieTarget();
+            calorieProgressLabel.setText(String.format(Locale.getDefault(),
+                    "%.0f / %d kcal estimadas (%d%%)",
+                    calories, target, Math.min(100, Math.round(calories * 100 / target))));
+            calorieProgress.setProgress((int) Math.min(100, Math.round(calories * 100 / target)));
+        } else {
+            calorieProgressLabel.setText("Configure uma meta para acompanhar seu consumo.");
+            calorieProgress.setProgress(0);
+        }
         historyList.removeAllViews();
         if (meals.isEmpty()) {
             addBody(historyList, "Nenhuma refeição registrada hoje.", 14);
@@ -531,6 +678,20 @@ public final class MainActivity extends Activity {
         return value == Math.rint(value)
                 ? String.format(Locale.getDefault(), "%.0f", value)
                 : String.format(Locale.getDefault(), "%.1f", value);
+    }
+
+    private double parseNumber(String value) {
+        return Double.parseDouble(value.trim().replace(',', '.'));
+    }
+
+    private int currentCalorieTarget() {
+        return CalorieGoalCalculator.estimate(
+                account.age,
+                account.weightKg,
+                account.heightCm,
+                account.formulaSex,
+                account.activityLevel,
+                account.goal);
     }
 
     private int dp(int value) {

@@ -68,10 +68,14 @@ final class SecureKeyStore {
 
     static void delete(Context context) throws GeneralSecurityException {
         preferences(context).edit().remove(VALUE).apply();
-        KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
-        keyStore.load(null);
-        if (keyStore.containsAlias(ALIAS)) {
-            keyStore.deleteEntry(ALIAS);
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
+            keyStore.load(null);
+            if (keyStore.containsAlias(ALIAS)) {
+                keyStore.deleteEntry(ALIAS);
+            }
+        } catch (java.io.IOException | java.security.cert.CertificateException exception) {
+            throw new GeneralSecurityException("Não foi possível remover a chave segura.", exception);
         }
     }
 

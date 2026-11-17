@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -19,13 +20,13 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ArrayAdapter;
 
 import org.json.JSONException;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -38,6 +39,10 @@ public final class MainActivity extends Activity {
     private static final int BACKGROUND = Color.rgb(244, 248, 244);
     private static final int TEXT = Color.rgb(23, 36, 29);
     private static final int MUTED = Color.rgb(91, 108, 97);
+    private static final int PICK_ANALYSIS_IMAGE = 1001;
+    private static final int PICK_CHAT_IMAGE = 1002;
+    private static final String AI_PREFERENCES = "fitfood_ai_consent";
+    private static final String GEMINI_CONSENT = "gemini_free_tier_consent";
     private static final String[] GOALS = {
             "Ganhar massa muscular",
             "Perder gordura",
@@ -59,6 +64,12 @@ public final class MainActivity extends Activity {
     private EditText analysisName;
     private EditText[] nutritionFields;
     private PlateAnalysis currentAnalysis;
+    private final List<ChatTurn> chatHistory = new ArrayList<>();
+    private LinearLayout chatTranscript;
+    private EditText chatInput;
+    private TextView chatStatus;
+    private Button sendChatButton;
+    private Uri pendingChatImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -181,10 +192,13 @@ public final class MainActivity extends Activity {
                         + "e nutrientes; você revisa antes de salvar.",
                 14);
         addButton(photoCard, "Escolher foto do prato", true, this::choosePhoto);
-        addButton(photoCard, "Configurar chave de IA", false, this::showApiKeyDialog);
+        addButton(photoCard, "Abrir chatbot FitFood", false, this::showChatScreen);
+        addButton(photoCard, "Configurar chave Gemini", false, this::showApiKeyDialog);
+        addButton(photoCard, "Revogar consentimento da IA", false, this::revokeFreeAiConsent);
         addBody(photoCard,
-                "A foto é enviada à API da OpenAI para análise e não é salva no diário. "
-                        + "O uso da API pode gerar cobrança na sua conta.",
+                "O chatbot usa a cota gratuita do Gemini, que tem limites. Mensagens e fotos "
+                        + "são enviadas ao Google; no plano gratuito, o conteúdo pode ser usado "
+                        + "para melhorar produtos. As fotos não são salvas no diário.",
                 12);
 
         status = text("", 14, MUTED, false);
@@ -330,7 +344,208 @@ public final class MainActivity extends Activity {
         return spinner;
     }
 
+    private void showChatScreen() {
+        String apiKey;
+        try {
+            apiKey = SecureKeyStore.load(this);
+        } catch (GeneralSecurityException exception) {
+            setStatus("Não foi possível acessar a chave Gemini. Configure-a novamente.", true);
+            return;
+        }
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            showApiKeyDialog();
+            return;
+        }
+
+        createScreen("Chat FitFood", "Converse sobre alimentação ou envie a foto de um prato.");
+        addButton(content, "Voltar ao diário", false, this::showMainScreen);
+        addBody(content,
+                "O chatbot usa o Gemini gratuito, sujeito a cotas e limites. Mensagens e fotos "
+                        + "são enviadas ao Google; no nível gratuito, o conteúdo pode ser usado "
+                        + "para melhorar produtos. Não envie dados pessoais sensíveis.",
+                13);
+
+        LinearLayout conversationCard = card();
+        content.addView(conversationCard, margins(0, 8, 0, 8));
+        chatTranscript = new LinearLayout(this);
+        chatTranscript.setOrientation(LinearLayout.VERTICAL);
+        conversationCard.addView(chatTranscript);
+
+        chatStatus = text("", 13, MUTED, false);
+        content.addView(chatStatus, margins(0, 4, 0, 4));
+        status = chatStatus;
+        chatInput = new EditText(this);
+        chatInput.setHint("Escreva sua mensagem...");
+        chatInput.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        chatInput.setSingleLine(false);
+        chatInput.setMinLines(2);
+        chatInput.setMaxLines(5);
+        chatInput.setTextColor(TEXT);
+        chatInput.setHintTextColor(MUTED);
+        content.addView(chatInput, margins(0, 4, 0, 4));
+        addButton(content, "Anexar foto", false, this::chooseChatImage);
+        sendChatButton = addButton(content, "Enviar mensagem", true, this::sendChatMessage);
+        if (pendingChatImage != null) {
+            chatStatus.setText("Foto anexada. Escreva uma mensagem ou envie a foto.");
+        }
+        renderChatHistory();
+    }
+
+    private void renderChatHistory() {
+        if (chatTranscript == null) {
+            return;
+        }
+        chatTranscript.removeAllViews();
+        if (chatHistory.isEmpty()) {
+            addBody(chatTranscript,
+                    "Olá! Posso responder dúvidas gerais ou ajudar a estimar os alimentos de "
+                            + "uma foto. As respostas não substituem orientação profissional.",
+                    14);
+            return;
+        }
+        for (ChatTurn turn : chatHistory) {
+            String speaker = turn.user ? "Você" : "FitFood";
+            String contentText = speaker + "\n" + turn.text
+                    + (turn.includedPhoto ? "\n[Foto do prato anexada]" : "");
+            TextView bubble = text(contentText, 14,
+                    turn.user ? Color.WHITE : TEXT, false);
+            bubble.setPadding(dp(12), dp(10), dp(12), dp(10));
+            bubble.setBackground(rounded(turn.user ? GREEN : BACKGROUND, 14));
+            chatTranscript.addView(bubble, margins(0, 4, 0, 4));
+        }
+    }
+
+    private void chooseChatImage() {
+        ensureFreeAiConsent(() -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("image/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivityForResult(intent, PICK_CHAT_IMAGE);
+        });
+    }
+
+    private void sendChatMessage() {
+        ensureFreeAiConsent(this::sendChatMessageAfterConsent);
+    }
+
+    private void sendChatMessageAfterConsent() {
+        String apiKey;
+        try {
+            apiKey = SecureKeyStore.load(this);
+        } catch (GeneralSecurityException exception) {
+            setStatus("Não foi possível acessar a chave Gemini. Configure-a novamente.", true);
+            return;
+        }
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            showApiKeyDialog();
+            return;
+        }
+
+        String message = chatInput.getText().toString().trim();
+        Uri image = pendingChatImage;
+        if (message.isEmpty() && image == null) {
+            chatInput.setError("Escreva uma mensagem ou anexe uma foto.");
+            return;
+        }
+        if (message.isEmpty()) {
+            message = "Analise esta foto do meu prato e estime os alimentos.";
+        }
+        ChatTurn userTurn = new ChatTurn(true, message, image != null);
+        chatHistory.add(userTurn);
+        trimChatHistory();
+        List<ChatTurn> requestHistory = new ArrayList<>(chatHistory);
+        pendingChatImage = null;
+        chatInput.setText("");
+        renderChatHistory();
+        sendChatButton.setEnabled(false);
+        chatStatus.setText("Consultando o Gemini gratuito...");
+        final int requestAccountId = account.id;
+        final String requestGoal = account.goal;
+        executor.execute(() -> {
+            try {
+                String answer = PlateAIService.chat(
+                        getContentResolver(), requestHistory, image, apiKey, requestGoal);
+                runOnUiThread(() -> {
+                    if (account != null && account.id == requestAccountId
+                            && chatHistory.contains(userTurn) && !isFinishing()) {
+                        chatHistory.add(new ChatTurn(false, answer, false));
+                        trimChatHistory();
+                        renderChatHistory();
+                        chatStatus.setText("");
+                        sendChatButton.setEnabled(true);
+                    }
+                });
+            } catch (IOException | JSONException | SecurityException exception) {
+                runOnUiThread(() -> {
+                    if (account != null && account.id == requestAccountId
+                            && chatHistory.contains(userTurn) && !isFinishing()) {
+                        chatStatus.setText(exception.getMessage() == null
+                                ? "Falha ao consultar o chatbot."
+                                : exception.getMessage());
+                        sendChatButton.setEnabled(true);
+                    }
+                });
+            }
+        });
+    }
+
+    private void ensureFreeAiConsent(Runnable action) {
+        if (getSharedPreferences(AI_PREFERENCES, MODE_PRIVATE)
+                .getBoolean(GEMINI_CONSENT, false)) {
+            action.run();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Uso da IA gratuita")
+                .setMessage("Para conversar ou analisar uma foto, o FitFood envia sua mensagem "
+                        + "e, se escolhida, a imagem ao Google Gemini. No plano gratuito, o Google "
+                        + "pode usar esse conteúdo para melhorar produtos; há limites de uso e "
+                        + "a disponibilidade pode variar. Para evitar cobrança, crie uma chave "
+                        + "no AI Studio e não associe faturamento ao projeto. Você concorda em "
+                        + "continuar?")
+                .setPositiveButton("Aceitar e continuar", (dialog, which) -> {
+                    getSharedPreferences(AI_PREFERENCES, MODE_PRIVATE).edit()
+                            .putBoolean(GEMINI_CONSENT, true)
+                            .apply();
+                    action.run();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void trimChatHistory() {
+        while (chatHistory.size() > 40) {
+            chatHistory.remove(0);
+        }
+    }
+
+    private void revokeFreeAiConsent() {
+        getSharedPreferences(AI_PREFERENCES, MODE_PRIVATE).edit()
+                .remove(GEMINI_CONSENT)
+                .apply();
+        chatHistory.clear();
+        pendingChatImage = null;
+        setStatus("Consentimento revogado. Será solicitado novamente antes de usar a IA.", false);
+    }
+
+    private void openGeminiKeyPage() {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://aistudio.google.com/apikey")));
+        } catch (android.content.ActivityNotFoundException exception) {
+            Toast.makeText(this, "Não foi possível abrir o navegador.",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void choosePhoto() {
+        ensureFreeAiConsent(this::choosePhotoAfterConsent);
+    }
+
+    private void choosePhotoAfterConsent() {
         String apiKey;
         try {
             apiKey = SecureKeyStore.load(this);
@@ -347,13 +562,22 @@ public final class MainActivity extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        startActivityForResult(intent, 1001);
+        startActivityForResult(intent, PICK_ANALYSIS_IMAGE);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != 1001 || resultCode != RESULT_OK
+        if (requestCode == PICK_CHAT_IMAGE) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                pendingChatImage = data.getData();
+                if (chatStatus != null) {
+                    chatStatus.setText("Foto anexada. Escreva uma mensagem ou envie a foto.");
+                }
+            }
+            return;
+        }
+        if (requestCode != PICK_ANALYSIS_IMAGE || resultCode != RESULT_OK
                 || data == null || data.getData() == null) {
             return;
         }
@@ -483,21 +707,28 @@ public final class MainActivity extends Activity {
     private void showApiKeyDialog() {
         EditText keyField = new EditText(this);
         keyField.setSingleLine(true);
-        keyField.setHint("Chave da API");
+        keyField.setHint("Chave da API Gemini");
         keyField.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         LinearLayout dialogContent = new LinearLayout(this);
         dialogContent.setOrientation(LinearLayout.VERTICAL);
         dialogContent.setPadding(dp(20), dp(8), dp(20), dp(8));
         TextView explanation = text(
-                "A chave é criptografada neste celular e enviada diretamente à API da OpenAI. "
-                        + "Não a compartilhe. O uso da API pode ter custos.",
+                "Crie uma chave no Google AI Studio. Para manter o uso gratuito, não associe "
+                        + "faturamento ao projeto; a cota grátis tem limites. Mensagens e fotos "
+                        + "enviadas ao Gemini podem ser usadas pelo Google para melhorar produtos. "
+                        + "A chave é criptografada neste celular.",
                 14, MUTED, false);
         dialogContent.addView(explanation, margins(0, 0, 0, 8));
+        TextView createKey = text(
+                "Criar chave grátis no Google AI Studio",
+                14, GREEN, true);
+        dialogContent.addView(createKey, margins(0, 4, 0, 8));
+        createKey.setOnClickListener(view -> openGeminiKeyPage());
         dialogContent.addView(keyField);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Configurar análise por IA")
+                .setTitle("Configurar Gemini gratuito")
                 .setView(dialogContent)
                 .setPositiveButton("Salvar chave", null)
                 .setNegativeButton("Cancelar", null)
@@ -513,7 +744,7 @@ public final class MainActivity extends Activity {
                 try {
                     SecureKeyStore.save(this, key);
                     dialog.dismiss();
-                    setStatus("Chave salva com segurança neste celular.", false);
+                    setStatus("Chave Gemini salva com segurança neste celular.", false);
                 } catch (GeneralSecurityException exception) {
                     keyField.setError("Não foi possível salvar a chave com segurança.");
                 }
@@ -577,6 +808,8 @@ public final class MainActivity extends Activity {
     private void signOut() {
         account = null;
         currentAnalysis = null;
+        chatHistory.clear();
+        pendingChatImage = null;
         showAuthScreen(database.hasAccounts() ? false : true);
     }
 
@@ -635,7 +868,8 @@ public final class MainActivity extends Activity {
         return view;
     }
 
-    private void addButton(LinearLayout parent, String label, boolean primary, Runnable action) {
+    private Button addButton(
+            LinearLayout parent, String label, boolean primary, Runnable action) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
@@ -644,6 +878,7 @@ public final class MainActivity extends Activity {
         button.setBackgroundTintList(ColorStateList.valueOf(primary ? GREEN : Color.WHITE));
         button.setOnClickListener(view -> action.run());
         parent.addView(button, margins(0, 6, 0, 4));
+        return button;
     }
 
     private GradientDrawable rounded(int color, int radius) {

@@ -20,6 +20,8 @@ final class SecureKeyStore {
     private static final String ALIAS = "fitfood_ai_key";
     private static final String PREFERENCES = "fitfood_secure";
     private static final String VALUE = "encrypted_api_key";
+    private static final String PROVIDER = "key_provider";
+    private static final String GEMINI_PROVIDER = "gemini_free_tier";
     private static final String KEYSTORE = "AndroidKeyStore";
     private static final int IV_LENGTH = 12;
 
@@ -37,11 +39,16 @@ final class SecureKeyStore {
         payload.put(encrypted);
         preferences(context).edit()
                 .putString(VALUE, Base64.encodeToString(payload.array(), Base64.NO_WRAP))
+                .putString(PROVIDER, GEMINI_PROVIDER)
                 .apply();
     }
 
     static String load(Context context) throws GeneralSecurityException {
-        String encoded = preferences(context).getString(VALUE, null);
+        SharedPreferences preferences = preferences(context);
+        if (!GEMINI_PROVIDER.equals(preferences.getString(PROVIDER, null))) {
+            return null;
+        }
+        String encoded = preferences.getString(VALUE, null);
         if (encoded == null) {
             return null;
         }
@@ -67,7 +74,7 @@ final class SecureKeyStore {
     }
 
     static void delete(Context context) throws GeneralSecurityException {
-        preferences(context).edit().remove(VALUE).apply();
+        preferences(context).edit().remove(VALUE).remove(PROVIDER).apply();
         try {
             KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
             keyStore.load(null);

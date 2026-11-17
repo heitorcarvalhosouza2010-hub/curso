@@ -7,9 +7,11 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -34,11 +36,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
-    private static final int GREEN = Color.rgb(20, 125, 80);
-    private static final int DARK_GREEN = Color.rgb(15, 88, 59);
-    private static final int BACKGROUND = Color.rgb(244, 248, 244);
-    private static final int TEXT = Color.rgb(23, 36, 29);
-    private static final int MUTED = Color.rgb(91, 108, 97);
+    private static final int GREEN = Color.rgb(31, 112, 75);
+    private static final int DARK_GREEN = Color.rgb(18, 68, 48);
+    private static final int BACKGROUND = Color.rgb(246, 248, 244);
+    private static final int SOFT_GREEN = Color.rgb(231, 242, 233);
+    private static final int MINT = Color.rgb(237, 247, 239);
+    private static final int BORDER = Color.rgb(221, 231, 222);
+    private static final int TEXT = Color.rgb(30, 45, 35);
+    private static final int MUTED = Color.rgb(103, 119, 108);
     private static final int PICK_ANALYSIS_IMAGE = 1001;
     private static final int PICK_CHAT_IMAGE = 1002;
     private static final String AI_PREFERENCES = "fitfood_ai_consent";
@@ -79,11 +84,10 @@ public final class MainActivity extends Activity {
     }
 
     private void showAuthScreen(boolean register) {
-        createScreen("FitFood", "Sua alimentação, entendida pela foto.");
-        TextView welcome = text(
-                "Analise o prato, revise a estimativa e acompanhe seu diário.",
-                16, MUTED, false);
-        content.addView(welcome, margins(0, 4, 0, 18));
+        createScreen(
+                register ? "Seu diário começa aqui" : "Bom ter você de volta",
+                register ? "Cuidar da alimentação pode ser mais simples."
+                        : "Entre para continuar acompanhando sua rotina.");
 
         LinearLayout card = card();
         content.addView(card, margins(0, 10, 0, 12));
@@ -148,11 +152,32 @@ public final class MainActivity extends Activity {
                 15, MUTED, false);
         content.addView(explanation, margins(0, 6, 0, 14));
 
-        for (String goal : GOALS) {
+        for (int i = 0; i < GOALS.length; i++) {
+            String goal = GOALS[i];
             LinearLayout option = card();
+            option.setOrientation(LinearLayout.HORIZONTAL);
+            option.setGravity(Gravity.CENTER_VERTICAL);
             content.addView(option, margins(0, 6, 0, 6));
-            addHeading(option, goal, 17);
-            addBody(option, "Toque para selecionar", 13);
+
+            TextView number = text(String.format(Locale.getDefault(), "%02d", i + 1),
+                    13, GREEN, true);
+            number.setGravity(Gravity.CENTER);
+            number.setBackground(rounded(SOFT_GREEN, 14));
+            option.addView(number, new LinearLayout.LayoutParams(dp(42), dp(42)));
+
+            LinearLayout labels = new LinearLayout(this);
+            labels.setOrientation(LinearLayout.VERTICAL);
+            labels.setPadding(dp(12), 0, dp(8), 0);
+            option.addView(labels, new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            labels.addView(text(goal, 16, TEXT, true));
+            labels.addView(text("Toque para escolher", 12, MUTED, false),
+                    margins(0, 4, 0, 0));
+
+            TextView arrow = text("›", 26, GREEN, false);
+            arrow.setGravity(Gravity.CENTER);
+            option.addView(arrow, new LinearLayout.LayoutParams(
+                    dp(24), ViewGroup.LayoutParams.WRAP_CONTENT));
             option.setOnClickListener(view -> {
                 account = database.updateGoal(account.id, goal);
                 if (account.hasCalorieProfile()) {
@@ -166,8 +191,14 @@ public final class MainActivity extends Activity {
     }
 
     private void showMainScreen() {
-        createScreen("Olá, " + firstName(account.email), "Análise de refeições por foto");
-        addBody(content, account.email, 13);
+        createScreen("Olá, " + firstName(account.email) + "!",
+                "Seu espaço para escolhas mais conscientes.");
+        TextView accountLabel = text("CONTA LOCAL  ·  " + account.email,
+                11, MUTED, true);
+        accountLabel.setLetterSpacing(0.04f);
+        accountLabel.setPadding(dp(12), dp(9), dp(12), dp(9));
+        accountLabel.setBackground(rounded(Color.WHITE, 14));
+        content.addView(accountLabel, margins(0, 0, 0, 6));
 
         LinearLayout goalCard = card();
         content.addView(goalCard, margins(0, 14, 0, 8));
@@ -186,20 +217,26 @@ public final class MainActivity extends Activity {
 
         LinearLayout photoCard = card();
         content.addView(photoCard, margins(0, 10, 0, 8));
+        photoCard.setBackground(rounded(MINT, 22));
         addHeading(photoCard, "Analise seu prato", 21);
         addBody(photoCard,
-                "Escolha uma foto JPG, PNG ou WEBP de até 10 MB. A IA estima os alimentos "
-                        + "e nutrientes; você revisa antes de salvar.",
+                "Uma foto basta para estimar porções e nutrientes. Revise tudo antes de "
+                        + "adicionar ao diário.",
                 14);
         addButton(photoCard, "Escolher foto do prato", true, this::choosePhoto);
         addButton(photoCard, "Abrir chatbot FitFood", false, this::showChatScreen);
-        addButton(photoCard, "Configurar chave Gemini", false, this::showApiKeyDialog);
-        addButton(photoCard, "Revogar consentimento da IA", false, this::revokeFreeAiConsent);
-        addBody(photoCard,
+
+        LinearLayout privacyCard = card();
+        content.addView(privacyCard, margins(0, 10, 0, 8));
+        addHeading(privacyCard, "IA e privacidade", 17);
+        addBody(privacyCard,
                 "O chatbot usa a cota gratuita do Gemini, que tem limites. Mensagens e fotos "
                         + "são enviadas ao Google; no plano gratuito, o conteúdo pode ser usado "
                         + "para melhorar produtos. As fotos não são salvas no diário.",
                 12);
+        addButton(privacyCard, "Configurar chave Gemini", false, this::showApiKeyDialog);
+        addButton(privacyCard, "Revogar consentimento da IA",
+                false, this::revokeFreeAiConsent);
 
         status = text("", 14, MUTED, false);
         content.addView(status, margins(0, 8, 0, 4));
@@ -218,6 +255,8 @@ public final class MainActivity extends Activity {
         calorieProgress = new ProgressBar(
                 this, null, android.R.attr.progressBarStyleHorizontal);
         calorieProgress.setMax(100);
+        calorieProgress.setProgressTintList(ColorStateList.valueOf(GREEN));
+        calorieProgress.setProgressBackgroundTintList(ColorStateList.valueOf(SOFT_GREEN));
         historyCard.addView(calorieProgress, margins(0, 2, 0, 8));
         historyList = new LinearLayout(this);
         historyList.setOrientation(LinearLayout.VERTICAL);
@@ -370,10 +409,14 @@ public final class MainActivity extends Activity {
         chatTranscript = new LinearLayout(this);
         chatTranscript.setOrientation(LinearLayout.VERTICAL);
         conversationCard.addView(chatTranscript);
+        conversationCard.setMinimumHeight(dp(220));
 
         chatStatus = text("", 13, MUTED, false);
         content.addView(chatStatus, margins(0, 4, 0, 4));
         status = chatStatus;
+
+        LinearLayout composer = card();
+        content.addView(composer, margins(0, 6, 0, 8));
         chatInput = new EditText(this);
         chatInput.setHint("Escreva sua mensagem...");
         chatInput.setInputType(InputType.TYPE_CLASS_TEXT
@@ -384,9 +427,11 @@ public final class MainActivity extends Activity {
         chatInput.setMaxLines(5);
         chatInput.setTextColor(TEXT);
         chatInput.setHintTextColor(MUTED);
-        content.addView(chatInput, margins(0, 4, 0, 4));
-        addButton(content, "Anexar foto", false, this::chooseChatImage);
-        sendChatButton = addButton(content, "Enviar mensagem", true, this::sendChatMessage);
+        chatInput.setPadding(dp(14), dp(12), dp(14), dp(12));
+        chatInput.setBackground(rounded(Color.rgb(250, 252, 249), 14));
+        composer.addView(chatInput, margins(0, 0, 0, 4));
+        addButton(composer, "Anexar foto", false, this::chooseChatImage);
+        sendChatButton = addButton(composer, "Enviar mensagem", true, this::sendChatMessage);
         if (pendingChatImage != null) {
             chatStatus.setText("Foto anexada. Escreva uma mensagem ou envie a foto.");
         }
@@ -406,14 +451,28 @@ public final class MainActivity extends Activity {
             return;
         }
         for (ChatTurn turn : chatHistory) {
-            String speaker = turn.user ? "Você" : "FitFood";
-            String contentText = speaker + "\n" + turn.text
-                    + (turn.includedPhoto ? "\n[Foto do prato anexada]" : "");
-            TextView bubble = text(contentText, 14,
+            LinearLayout bubble = new LinearLayout(this);
+            bubble.setOrientation(LinearLayout.VERTICAL);
+            bubble.setPadding(dp(14), dp(11), dp(14), dp(11));
+            bubble.setBackground(rounded(turn.user ? GREEN : SOFT_GREEN, 18));
+            bubble.setElevation(dp(1));
+
+            TextView speaker = text(turn.user ? "VOCÊ" : "FITFOOD",
+                    10, turn.user ? Color.rgb(218, 239, 223) : GREEN, true);
+            speaker.setLetterSpacing(0.08f);
+            bubble.addView(speaker, margins(0, 0, 0, 5));
+
+            String message = turn.text
+                    + (turn.includedPhoto ? "\nFoto do prato anexada" : "");
+            TextView messageView = text(message, 14,
                     turn.user ? Color.WHITE : TEXT, false);
-            bubble.setPadding(dp(12), dp(10), dp(12), dp(10));
-            bubble.setBackground(rounded(turn.user ? GREEN : BACKGROUND, 14));
-            chatTranscript.addView(bubble, margins(0, 4, 0, 4));
+            messageView.setMaxWidth(dp(280));
+            bubble.addView(messageView);
+            LinearLayout.LayoutParams bubbleParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            bubbleParams.gravity = turn.user ? Gravity.END : Gravity.START;
+            bubbleParams.setMargins(0, dp(4), 0, dp(4));
+            chatTranscript.addView(bubble, bubbleParams);
         }
     }
 
@@ -774,9 +833,12 @@ public final class MainActivity extends Activity {
             carbs += meal.carbs;
             fat += meal.fat;
         }
+        String mealCount = meals.size() == 1
+                ? "1 refeição registrada"
+                : meals.size() + " refeições registradas";
         summary.setText(String.format(Locale.getDefault(),
-                "%d refeições · %.1f kcal · P %.1f g · C %.1f g · G %.1f g",
-                meals.size(), calories, protein, carbs, fat));
+                "%s\n%.0f kcal  ·  P %.0f g  ·  C %.0f g  ·  G %.0f g",
+                mealCount, calories, protein, carbs, fat));
         if (account.hasCalorieProfile()) {
             int target = currentCalorieTarget();
             calorieProgressLabel.setText(String.format(Locale.getDefault(),
@@ -794,13 +856,22 @@ public final class MainActivity extends Activity {
         }
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         for (MealDatabase.Meal meal : meals) {
-            TextView item = text(String.format(Locale.getDefault(),
-                    "%s  ·  %s (%s g)\n%.1f kcal  |  P %.1f g  C %.1f g  G %.1f g",
-                    timeFormat.format(new Date(meal.eatenAt)), meal.name,
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(dp(14), dp(12), dp(14), dp(12));
+            item.setBackground(rounded(Color.rgb(250, 252, 249), 16));
+            LinearLayout mealHeader = new LinearLayout(this);
+            mealHeader.setGravity(Gravity.CENTER_VERTICAL);
+            item.addView(mealHeader);
+            TextView name = text(meal.name, 15, TEXT, true);
+            mealHeader.addView(name, new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            mealHeader.addView(text(timeFormat.format(new Date(meal.eatenAt)),
+                    12, MUTED, false));
+            addBody(item, String.format(Locale.getDefault(),
+                    "%s g  ·  %.0f kcal  ·  P %.0f g  ·  C %.0f g  ·  G %.0f g",
                     formatNumber(meal.amount), meal.calories, meal.protein,
-                    meal.carbs, meal.fat), 14, TEXT, false);
-            item.setPadding(dp(12), dp(10), dp(12), dp(10));
-            item.setBackground(rounded(Color.WHITE, 12));
+                    meal.carbs, meal.fat), 12);
             historyList.addView(item, margins(0, 4, 0, 4));
         }
     }
@@ -819,22 +890,41 @@ public final class MainActivity extends Activity {
         scrollView.setBackgroundColor(BACKGROUND);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(20), dp(24), dp(20), dp(32));
+        content.setPadding(dp(18), dp(14), dp(18), dp(30));
         content.setFitsSystemWindows(true);
         scrollView.addView(content);
         setContentView(scrollView);
 
-        TextView heading = text(title, 30, DARK_GREEN, true);
-        content.addView(heading);
-        TextView subheading = text(subtitle, 16, MUTED, false);
-        content.addView(subheading, margins(0, 2, 0, 8));
+        getWindow().setStatusBarColor(DARK_GREEN);
+        getWindow().setNavigationBarColor(BACKGROUND);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setPadding(dp(22), dp(20), dp(22), dp(22));
+        GradientDrawable headerBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{GREEN, DARK_GREEN});
+        headerBackground.setCornerRadius(dp(26));
+        header.setBackground(headerBackground);
+
+        TextView brand = text("FITFOOD  ·  SEU DIÁRIO SAUDÁVEL", 11,
+                Color.rgb(211, 235, 217), true);
+        brand.setLetterSpacing(0.08f);
+        header.addView(brand, margins(0, 0, 0, 12));
+
+        TextView heading = text(title, 28, Color.WHITE, true);
+        header.addView(heading);
+        TextView subheading = text(subtitle, 15, Color.rgb(230, 242, 232), false);
+        header.addView(subheading, margins(0, 5, 0, 0));
+        content.addView(header, margins(0, 0, 0, 16));
     }
 
     private LinearLayout card() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
-        card.setBackground(rounded(Color.WHITE, 18));
+        card.setPadding(dp(18), dp(18), dp(18), dp(18));
+        card.setBackground(rounded(Color.WHITE, 22));
+        card.setElevation(dp(2));
         return card;
     }
 
@@ -845,6 +935,11 @@ public final class MainActivity extends Activity {
         editText.setInputType(inputType);
         editText.setTextColor(TEXT);
         editText.setHintTextColor(MUTED);
+        editText.setPadding(dp(14), dp(12), dp(14), dp(12));
+        editText.setMinHeight(dp(50));
+        GradientDrawable fieldBackground = rounded(Color.rgb(250, 252, 249), 14);
+        fieldBackground.setStroke(dp(1), BORDER);
+        editText.setBackground(fieldBackground);
         parent.addView(editText, margins(0, 4, 0, 4));
         return editText;
     }
@@ -862,6 +957,8 @@ public final class MainActivity extends Activity {
         view.setText(value);
         view.setTextColor(color);
         view.setTextSize(size);
+        view.setLineSpacing(dp(2), 1f);
+        view.setIncludeFontPadding(false);
         if (bold) {
             view.setTypeface(null, Typeface.BOLD);
         }
@@ -874,8 +971,16 @@ public final class MainActivity extends Activity {
         button.setText(label);
         button.setAllCaps(false);
         button.setTextSize(15);
-        button.setTextColor(primary ? Color.WHITE : GREEN);
-        button.setBackgroundTintList(ColorStateList.valueOf(primary ? GREEN : Color.WHITE));
+        button.setTextColor(primary ? Color.WHITE : DARK_GREEN);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(50));
+        button.setPadding(dp(18), dp(10), dp(18), dp(10));
+        int buttonColor = primary ? GREEN : SOFT_GREEN;
+        button.setBackground(new RippleDrawable(
+                ColorStateList.valueOf(Color.rgb(194, 220, 199)),
+                rounded(buttonColor, 16),
+                null));
+        button.setElevation(primary ? dp(2) : 0);
         button.setOnClickListener(view -> action.run());
         parent.addView(button, margins(0, 6, 0, 4));
         return button;

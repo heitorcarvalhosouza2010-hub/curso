@@ -16,6 +16,7 @@ def add_meal(
     protein_g: float,
     carbs_g: float,
     fat_g: float,
+    account_id: int | None = None,
     eaten_at: datetime | None = None,
 ) -> Meal:
     cleaned_name = name.strip()
@@ -26,6 +27,8 @@ def add_meal(
         raise ValueError("O nome da refeição deve ter no máximo 120 caracteres.")
     if not all(math.isfinite(value) for value in numeric_values):
         raise ValueError("Os valores nutricionais devem ser números finitos.")
+    if account_id is not None and account_id <= 0:
+        raise ValueError("A conta informada é inválida.")
     if amount_g <= 0 or any(value < 0 for value in numeric_values[1:]):
         raise ValueError("A porção deve ser positiva e os macros não negativos.")
     if amount_g > 100000 or calories > 100000 or any(
@@ -45,6 +48,7 @@ def add_meal(
         carbs_g=carbs_g,
         fat_g=fat_g,
         eaten_at=meal_time,
+        account_id=account_id,
     )
     session.add(meal)
     session.commit()
@@ -52,18 +56,29 @@ def add_meal(
     return meal
 
 
-def list_meals(session: Session, day: date | None = None) -> list[Meal]:
+def list_meals(
+    session: Session,
+    day: date | None = None,
+    *,
+    account_id: int | None = None,
+) -> list[Meal]:
     statement = select(Meal).order_by(Meal.eaten_at.desc(), Meal.id.desc())
     if day is not None:
         start = datetime.combine(day, time.min)
         end = start + timedelta(days=1)
         statement = statement.where(Meal.eaten_at >= start, Meal.eaten_at < end)
+    if account_id is not None:
+        statement = statement.where(Meal.account_id == account_id)
     return list(session.scalars(statement))
 
 
-def delete_meal(session: Session, meal_id: int) -> bool:
+def delete_meal(
+    session: Session, meal_id: int, *, account_id: int | None = None
+) -> bool:
     meal = session.get(Meal, meal_id)
-    if meal is None:
+    if meal is None or (
+        account_id is not None and meal.account_id != account_id
+    ):
         return False
     session.delete(meal)
     session.commit()

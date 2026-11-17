@@ -1,10 +1,14 @@
 # FitFood
 
-Aplicativo inicial para pessoas que treinam registrarem refeições e acompanharem calorias e macronutrientes. As sugestões de IA são gerais e educativas; o aplicativo não substitui orientação de nutricionista ou profissional de saúde.
+Aplicativo desktop para analisar refeições a partir de fotos e acompanhar estimativas de calorias e macronutrientes. As estimativas e recomendações de IA são gerais, podem conter erros e não substituem orientação de nutricionista ou profissional de saúde.
 
 ## Recursos
 
-- Registro local de refeições com calorias, proteínas, carboidratos e gorduras.
+- Análise por IA de fotos de pratos em JPG, PNG ou WEBP, com limite de 10 MB.
+- Estimativa visual de alimentos, porção, calorias, proteínas, carboidratos e gorduras, com indicação de incerteza e recomendação educativa relacionada ao objetivo informado.
+- Revisão da estimativa antes de registrá-la no diário.
+- Cadastro e login locais por email e senha; a escolha do objetivo físico ocorre em uma etapa separada e pode ser alterada depois.
+- Histórico diário separado por conta.
 - Resumo diário e histórico armazenados em SQLite.
 - Interface desktop com CustomTkinter.
 - API FastAPI para refeições, resumo e sugestões opcionais de IA.
@@ -14,7 +18,7 @@ Aplicativo inicial para pessoas que treinam registrarem refeições e acompanhar
 
 - Python 3.10 ou superior.
 - Windows, macOS ou Linux.
-- Uma chave de API compatível com a API de chat da OpenAI somente para usar as sugestões de IA.
+- Uma chave de API compatível com a API de chat da OpenAI e um modelo com suporte a imagens para analisar fotos.
 
 ## Instalação e execução
 
@@ -30,7 +34,11 @@ python -m src.app
 
 No macOS/Linux, ative o ambiente com `source .venv/bin/activate` e execute `python -m src.app`.
 
-O banco local é criado automaticamente na pasta de dados do usuário (`%LOCALAPPDATA%\FitFood\fitfood.db` no Windows). Para habilitar sugestões de IA no desenvolvimento, preencha `AI_API_KEY` no `.env`; no app instalado, use `%LOCALAPPDATA%\FitFood\.env`. Nunca versione esse arquivo.
+O banco local é criado automaticamente na pasta de dados do usuário (`%LOCALAPPDATA%\FitFood\fitfood.db` no Windows). Para habilitar a análise de fotos, preencha `AI_API_KEY` no `.env`; no app instalado, use `%LOCALAPPDATA%\FitFood\.env`. Nunca versione esse arquivo. O modelo configurado em `AI_MODEL` precisa aceitar imagens; o padrão `gpt-4o-mini` é compatível com imagens.
+
+O cadastro usa email como identificador local e não verifica a posse do email nem oferece recuperação ou sincronização de senha. A senha é armazenada como hash derivado, não em texto simples. O login bloqueia a interface do aplicativo, mas não protege os arquivos do computador contra acesso direto. As contas e refeições permanecem no dispositivo.
+
+Quando você escolhe analisar uma foto, ela é enviada ao serviço configurado por `AI_API_URL` para processamento. A imagem não é guardada no diário. O resultado é uma estimativa visual: peso, ingredientes ocultos e método de preparo não podem ser identificados com precisão só pela foto. Revise as incertezas antes de registrar. Recomendações são gerais, não prescrevem dietas ou metas e não substituem orientação profissional.
 
 ## API local
 

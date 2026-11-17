@@ -9,16 +9,20 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Space;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,6 +52,8 @@ public final class MainActivity extends Activity {
     private static final int PICK_CHAT_IMAGE = 1002;
     private static final String AI_PREFERENCES = "fitfood_ai_consent";
     private static final String GEMINI_CONSENT = "gemini_free_tier_consent";
+    private static final String APP_PREFERENCES = "fitfood_app";
+    private static final String COVER_SEEN = "cover_seen";
     private static final String[] GOALS = {
             "Ganhar massa muscular",
             "Perder gordura",
@@ -80,7 +86,103 @@ public final class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         database = new MealDatabase(this);
-        showAuthScreen(!database.hasAccounts());
+        if (getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE)
+                .getBoolean(COVER_SEEN, false)) {
+            showAuthScreen(!database.hasAccounts());
+        } else {
+            showCoverScreen();
+        }
+    }
+
+    private void showCoverScreen() {
+        boolean hasAccounts = database.hasAccounts();
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+        scrollView.setBackgroundColor(BACKGROUND);
+
+        LinearLayout cover = new LinearLayout(this);
+        cover.setOrientation(LinearLayout.VERTICAL);
+        cover.setPadding(dp(24), dp(18), dp(24), dp(22));
+        scrollView.addView(cover, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(scrollView);
+        setSystemBars(true);
+
+        LinearLayout brand = new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(R.drawable.ic_fitfood_icon);
+        mark.setContentDescription("FitFood");
+        brand.addView(mark, new LinearLayout.LayoutParams(dp(46), dp(46)));
+        LinearLayout brandText = new LinearLayout(this);
+        brandText.setOrientation(LinearLayout.VERTICAL);
+        brandText.setPadding(dp(10), 0, 0, 0);
+        brandText.addView(text("FitFood", 21, DARK_GREEN, true));
+        brandText.addView(text("SEU DIÁRIO SAUDÁVEL", 10, MUTED, true),
+                margins(0, 3, 0, 0));
+        brand.addView(brandText);
+        cover.addView(brand, margins(0, 0, 0, 4));
+
+        ImageView illustration = new ImageView(this);
+        illustration.setImageResource(R.drawable.cover_illustration);
+        illustration.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        illustration.setContentDescription("Ilustração de uma refeição colorida");
+        LinearLayout.LayoutParams illustrationParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(236));
+        illustrationParams.setMargins(0, dp(6), 0, 0);
+        cover.addView(illustration, illustrationParams);
+
+        TextView title = text("Mais leveza em cada escolha.", 30, DARK_GREEN, true);
+        title.setGravity(Gravity.CENTER);
+        cover.addView(title, margins(0, 8, 0, 0));
+        TextView subtitle = text(
+                "Fotografe seu prato, confira uma estimativa dos nutrientes e acompanhe "
+                        + "seu dia — sem complicação.",
+                15, MUTED, false);
+        subtitle.setGravity(Gravity.CENTER);
+        cover.addView(subtitle, margins(0, 10, 0, 14));
+
+        LinearLayout features = new LinearLayout(this);
+        features.setOrientation(LinearLayout.HORIZONTAL);
+        features.addView(coverFeature("FOTO", "Análise visual"),
+                coverFeatureParams(false));
+        features.addView(coverFeature("DIÁRIO", "Seu histórico"),
+                coverFeatureParams(true));
+        features.addView(coverFeature("META", "Seu objetivo"),
+                coverFeatureParams(true));
+        cover.addView(features, margins(0, 0, 0, 10));
+
+        Space spacer = new Space(this);
+        cover.addView(spacer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+        addButton(cover, hasAccounts ? "Entrar na minha conta" : "Começar agora",
+                true, () -> {
+                    getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE)
+                            .edit().putBoolean(COVER_SEEN, true).apply();
+                    showAuthScreen(!database.hasAccounts());
+                });
+        TextView privacy = text("Seus dados do diário ficam neste celular.",
+                12, MUTED, false);
+        privacy.setGravity(Gravity.CENTER);
+        cover.addView(privacy, margins(0, 8, 0, 0));
+    }
+
+    private LinearLayout coverFeature(String title, String detail) {
+        LinearLayout feature = new LinearLayout(this);
+        feature.setOrientation(LinearLayout.VERTICAL);
+        feature.setPadding(dp(10), dp(12), dp(8), dp(12));
+        feature.setBackground(rounded(Color.WHITE, 16));
+        addHeading(feature, title, 11);
+        addBody(feature, detail, 11);
+        return feature;
+    }
+
+    private LinearLayout.LayoutParams coverFeatureParams(boolean insetStart) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        params.setMargins(dp(insetStart ? 6 : 0), 0, dp(3), 0);
+        return params;
     }
 
     private void showAuthScreen(boolean register) {
@@ -895,8 +997,7 @@ public final class MainActivity extends Activity {
         scrollView.addView(content);
         setContentView(scrollView);
 
-        getWindow().setStatusBarColor(DARK_GREEN);
-        getWindow().setNavigationBarColor(BACKGROUND);
+        setSystemBars(false);
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.VERTICAL);
@@ -926,6 +1027,17 @@ public final class MainActivity extends Activity {
         card.setBackground(rounded(Color.WHITE, 22));
         card.setElevation(dp(2));
         return card;
+    }
+
+    private void setSystemBars(boolean lightStatusBar) {
+        int visibility = lightStatusBar ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0;
+        boolean lightNavigationBar = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
+        if (lightNavigationBar) {
+            visibility |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        getWindow().getDecorView().setSystemUiVisibility(visibility);
+        getWindow().setStatusBarColor(lightStatusBar ? BACKGROUND : DARK_GREEN);
+        getWindow().setNavigationBarColor(lightNavigationBar ? BACKGROUND : DARK_GREEN);
     }
 
     private EditText field(LinearLayout parent, String hint, int inputType) {

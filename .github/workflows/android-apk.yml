@@ -43,13 +43,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk FitFood-Android-v0.4.0.apk
-          if ! gh release view v0.4.0 --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
-            gh release create v0.4.0 \
+          cp android/app/build/outputs/apk/debug/app-debug.apk FitFood-Android-v0.5.0.apk
+          if ! gh release view v0.5.0 --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            gh release create v0.5.0 \
               --repo "${GITHUB_REPOSITORY}" \
               --target "${GITHUB_SHA}" \
-              --title "FitFood v0.4.0 (beta)" \
-              --notes "Redesign visual do Android, chatbot Gemini, análise de fotos, login local, meta calórica estimada e diário por conta."
+              --title "FitFood v0.5.0 (beta)" \
+              --notes "Nova tela de capa e identidade visual, interface adaptada para celular, chatbot Gemini, análise de fotos e diário por conta."
           fi
-          gh release upload v0.4.0 FitFood-Android-v0.4.0.apk \
+          gh release upload v0.5.0 FitFood-Android-v0.5.0.apk \
             --repo "${GITHUB_REPOSITORY}" --clobber
